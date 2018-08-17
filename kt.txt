@@ -1,0 +1,476 @@
+def get_immediate_subdirectories(a_dir):
+    filenames = []
+    for root, dirs, files in os.walk(a_dir):
+        for file in files:
+            filenames.append(file)
+    return filenames
+
+
+class GiveKeypoints:
+    def __init__(self, img_cyc, img_spot):
+        self.cyc_points = np.zeros((10, 1, 2))
+        self.spot_points = np.zeros((10, 1, 2))
+        self.img_cyc = img_cyc
+        self.img_spot = img_spot
+        self.i = 0
+
+    def draw_circle_cyc(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDBLCLK:
+            cv2.circle(self.img_cyc, (x, y), 2, (255, 0, 0), -1)
+            mousex, mousey = x, y
+            self.spot_points[self.i, 0, 0] = mousex
+            self.spot_points[self.i, 0, 1] = mousey
+            print(mousex, mousey)
+            print("{}th point is clicked".format(self.i))
+            self.i = self.i + 1
+
+    def draw_circle_spot(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDBLCLK:
+            cv2.circle(self.img_spot, (x, y), 2, (255, 0, 0), -1)
+            mousex, mousey = x, y
+            self.cyc_points[self.i, 0, 0] = mousex
+            self.cyc_points[self.i, 0, 1] = mousey
+            print(mousex, mousey)
+
+    def click_points(self):
+        while 1:
+            cv2.imshow("input1", self.img_cyc)
+            cv2.imshow("input2", self.img_spot)
+            cv2.setMouseCallback("input1", self.draw_circle_cyc)
+            cv2.setMouseCallback("input2", self.draw_circle_spot)
+            if cv2.waitKey(20) & 0xFF == 27 or self.i == 10:
+                break
+        cv2.destroyAllWindows()
+        return self.cyc_points, self.spot_points
+
+    @staticmethod
+    def find_homography(src_pt, dst_pt):
+        matrix, mask = cv2.findHomography(src_pt, dst_pt, cv2.RANSAC, 5.0)
+        return matrix
+
+
+def generate_avg_homography(new_spotcam, new_cyclops, list_length, num_items):
+    lsp = list(range(list_length))
+    k_choice = np.random.choice(lsp, num_items)
+    avg_hom = np.zeros((3, 3))
+    for i in k_choice:
+        q_image = new_cyclops + "/" + "{:06d}.jpg".format(i)
+        t_image = new_spotcam + "/" + "{:06d}.jpg".format(i)
+        img1 = cv2.imread(q_image)
+        img1 = cv2.resize(img1, (480, 360), interpolation=cv2.INTER_CUBIC)
+        img2 = cv2.imread(t_image)
+        img2 = cv2.resize(img2, (480, 360), interpolation=cv2.INTER_CUBIC)
+        k = GiveKeypoints(img1, img2)
+        src_pts, dst_pts = k.click_points()
+        matrix = k.find_homography(src_pts, dst_pts)
+        print(avg_hom)
+        print(matrix)
+        avg_hom = avg_hom + matrix
+        print(avg_hom)
+    avg_hom = avg_hom / float(num_items)
+    print(avg_hom)
+    return avg_hom
+
+
+def get_args():
+    parser = ArgumentParser(description='Find average homography of aligned images')
+    parser.add_argument("input_spotcam", type=str,
+                        help='path to input spotcam data in .jpg')
+    parser.add_argument("input_cyclops", type=str,
+                        help='path to input cyclops data in .jpg')
+    parser.add_argument("sample_size", type=int,
+                        help='number of samples to be considered')
+    args = parser.parse_args()
+    return args
+
+	
+class HomographyLoss(nn.Module):
+    def __init__(self, ):
+        super(HomographyLoss, self).__init__()
+		
+def register_gradients(self, module, input, output):
+	output_new = output[0].numpy()
+	
+self._model.stn.localization.register_backward_hook(self.register_gradients)
+self._model.stn.fc_loc.register_backward_hook(self.register_gradients)
+
+import torch
+import numpy as np
+
+
+
+Aux_M1 = np.array([
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 1 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 1 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 1 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 1 , 0 ]], dtype=np.float32)
+
+
+Aux_M2 = np.array([
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 1 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 1  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 1 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [ 0 , 0 , 0 , 0  , 0 , 0 , 0 , 1 ]], dtype=np.float32)
+
+
+
+Aux_M3 = np.array([
+          [0],
+          [1],
+          [0],
+          [1],
+          [0],
+          [1],
+          [0],
+          [1]], dtype=np.float32)
+
+
+
+Aux_M4 = np.array([
+          [-1 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 ,-1 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  ,-1 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 ,-1 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ]], dtype=np.float32)
+
+
+Aux_M5 = np.array([
+          [0 ,-1 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 ,-1  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 ,-1 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 ,-1 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ]], dtype=np.float32)
+
+
+
+Aux_M6 = np.array([
+          [-1 ],
+          [ 0 ],
+          [-1 ],
+          [ 0 ],
+          [-1 ],
+          [ 0 ],
+          [-1 ],
+          [ 0 ]], dtype=np.float32)
+
+
+Aux_M71 = np.array([
+          [0 , 1 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [1 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 1  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 1 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 1 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 1 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 1 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 1 , 0 ]], dtype=np.float32)
+
+
+Aux_M72 = np.array([
+          [1 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [-1 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 1 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 ,-1 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 1 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  ,-1 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 1 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 ,-1 , 0 ]], dtype=np.float32)
+
+
+
+Aux_M8 = np.array([
+          [0 , 1 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 ,-1 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 1  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 ,-1  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 1 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 ,-1 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 , 1 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 ,-1 ]], dtype=np.float32)
+
+
+Aux_Mb = np.array([
+          [0 ,-1 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [1 , 0 , 0 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , -1  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 1 , 0  , 0 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 ,-1 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 1 , 0 , 0 , 0 ],
+          [0 , 0 , 0 , 0  , 0 , 0 , 0 ,-1 ],
+          [0 , 0 , 0 , 0 , 0 , 0 , 1 , 0 ]], dtype=np.float32)
+
+
+def solve_dlt(x):
+    pts_1_tile = np.zeros((8, 1), np.float32)
+    pts_1_tile[0, 0] = 0  # x
+    pts_1_tile[1, 0] = 0  # y
+    pts_1_tile[2, 0] = 479
+    pts_1_tile[3, 0] = 0
+    pts_1_tile[4, 0] = 0
+    pts_1_tile[5, 0] = 359
+    pts_1_tile[6, 0] = 479
+    pts_1_tile[7, 0] = 359
+    pts_1_tile = pts_1_tile.astype('float32')
+    pts_1_tile = torch.from_numpy(pts_1_tile)
+    # Solve for H using DLT
+    pred_h4p_tile = x.view(-1, 8, 1)
+    batch_size = pred_h4p_tile.size()[0]
+    # 4 points on the second image
+    pts_1_tile = pts_1_tile.repeat(batch_size, 1, 1)
+    pred_pts_2_tile = pred_h4p_tile + pts_1_tile
+
+    M1_tile = torch.tensor(Aux_M1)
+    M1_tile = M1_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    M2_tile = torch.tensor(Aux_M2)
+    M2_tile = M2_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    M3_tile = torch.tensor(Aux_M3)
+    M3_tile = M3_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    M4_tile = torch.tensor(Aux_M4)
+    M4_tile = M4_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    M5_tile = torch.tensor(Aux_M5)
+    M5_tile = M5_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    M6_tile = torch.tensor(Aux_M6)
+    M6_tile = M6_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    M71_tile = torch.tensor(Aux_M71)
+    M71_tile = M71_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    M72_tile = torch.tensor(Aux_M72)
+    M72_tile = M72_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    M8_tile = torch.tensor(Aux_M8)
+    M8_tile = M8_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    Mb_tile = torch.tensor(Aux_Mb)
+    Mb_tile = Mb_tile.unsqueeze(0).repeat(batch_size, 1, 1)
+
+    # Form the equations Ax = b to compute H
+    # Form A matrix
+    A1 = torch.matmul(M1_tile, pts_1_tile)   # Column 1
+    A1 = A1.view(-1, 8)
+    A2 = torch.matmul(M2_tile, pts_1_tile)   # Column 2
+    A2 = A2.view(-1, 8)
+    A3 = M3_tile                   # Column 3
+    A3 = A3.view(-1, 8)
+    A4 = torch.matmul(M4_tile, pts_1_tile)   # Column 4
+    A4 = A4.view(-1, 8)
+    A5 = torch.matmul(M5_tile, pts_1_tile)   # Column 5
+    A5 = A5.view(-1, 8)
+    A6 = M6_tile                   # Column 6
+    A6 = A6.view(-1, 8)
+    A7 = torch.matmul(M71_tile, pred_pts_2_tile) * torch.matmul(M72_tile, pts_1_tile)  # Column 7
+    A7 = A7.view(-1, 8)
+    A8 = torch.matmul(M71_tile, pred_pts_2_tile) * torch.matmul(M8_tile, pts_1_tile)  # Column 8
+    A8 = A8.view(-1, 8)
+
+    A_mat = torch.stack([A1, A2, A3, A4, A5, A6, A7, A8],  dim=1)
+    A_mat = torch.t(A_mat)
+    A_mat = A_mat.permute((1, 2, 0))  # BATCH_SIZE x 8 (A_i) x 8
+
+    b_mat = torch.matmul(Mb_tile, pred_pts_2_tile)
+
+    # # Solve the Ax = b
+    A_mat = A_mat.squeeze(0)
+    b_mat = b_mat.squeeze(0)
+    H_8el, _ = torch.gesv(b_mat, A_mat)  # BATCH_SIZE x 8.
+    H_8el = H_8el.unsqueeze(0)
+    # Add ones to the last cols to reconstruct H for computing reprojection error
+    h_ones = torch.ones([batch_size, 1, 1])
+    H_9el = torch.cat([H_8el, h_ones], 1)
+    H_mat = H_9el.view(-1, 3, 3) # BATCH_SIZE x 3 x 3
+    return H_mat
+
+    def stn(self, x):
+        """
+        Spatial Transformer Network module of the CNN
+        :param x: the input tensor
+        :return: transformed input and transformations theta for the tensor
+        """
+        # if self.mode == 'gray':
+        xs = self.localization(x)
+        xs = xs.view(-1, 128 * 22 * 30)
+        params = self.fc_loc(xs)
+        params = params.view(-1, 4, 2)
+        theta = TDLT.solve_dlt(params)
+        x = x[:, 0, :, :]
+        x = x.view(-1, 1, 360, 480)
+        n, c, h, w = x.size()
+        x = perspective_transform(n, h, w, x, theta)
+        return x, params
+        # else:
+        #     x_in = x[:, 0:2, :, :]
+        #     xs = self.localization(x_in)
+        #     xs = xs.view(-1, 128 * 22 * 30)
+        #     params = self.fc_loc(xs)
+        #     params = params.view(-1, 4, 2)
+        #     theta = TDLT.solve_dlt(params)
+        #     x = x[:, 2:5, :, :]
+        #     x = x.view(-1, 3, 360, 480)
+        #     n, c, h, w = x.size()
+        #     x = perspective_transform(n, h, w, x, theta)
+        #     return x, params
+
+    def forward(self, data):
+        """
+        Forward pass of the network
+        :param data: input tensor
+        """
+        output, params = self.stn(data)
+        return output, params
+
+
+def perspective_transform(batchSize, H, W, image, pMtrx):
+    # warp the canonical coordinates
+    print(pMtrx)
+    X, Y = np.meshgrid(np.linspace(0, W-1, W), np.linspace(0, H-1, H))
+    X, Y = X.flatten(), Y.flatten()
+    XYhom = np.stack([X, Y, np.ones_like(X)], axis=1).T
+    XYhom = np.tile(XYhom, [batchSize, 1, 1]).astype(np.float32)
+    XYhom = torch.from_numpy(XYhom)
+    XYhom = torch.autograd.Variable(XYhom, requires_grad=False)
+    pMtrx = pMtrx.float()
+    XYwarpHom = pMtrx.matmul(XYhom)
+    XwarpHom, YwarpHom, ZwarpHom = torch.unbind(XYwarpHom, dim=1)
+    Xwarp = (XwarpHom / (ZwarpHom + 1e-8)).view(batchSize, H, W)
+    Ywarp = (YwarpHom / (ZwarpHom + 1e-8)).view(batchSize, H, W)
+    Xwarp = Xwarp / (0.5*(W-1)) - 1
+    Ywarp = Ywarp / (0.5*(H-1)) - 1
+    grid = torch.stack([Xwarp, Ywarp], dim=-1)
+    imageWarp = torch.nn.functional.grid_sample(image, grid)
+    return imageWarp
+	
+def get_gps(seconds):
+    utc = datetime(1980, 1, 6) + timedelta(seconds=seconds - (37 - 19))
+    utc = utc.strftime('%Y-%m-%d %H:%M:%S.%f')
+    return utc
+
+
+def get_unix(seconds):
+    utc = datetime.utcfromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S.%f')
+    return utc
+	
+
+def get_pts_from_mat(matrix):
+    target_theta = torch.from_numpy(matrix)
+    X, Y = np.meshgrid(np.linspace(0, 479, 480), np.linspace(0, 359, 360))
+    X, Y = X.flatten(), Y.flatten()
+    XYhom = np.stack([X, Y, np.ones_like(X)], axis=1).T
+    XYhom = np.tile(XYhom, [1, 1, 1]).astype(np.float32)
+    XYhom = torch.from_numpy(XYhom)
+    XYhom = torch.autograd.Variable(XYhom, requires_grad=False)
+    XYwarpHom = target_theta.matmul(XYhom)
+    XYwarpHom = XYwarpHom.view(-1, 3, 360, 480)
+    XYwarpHom = XYwarpHom.squeeze(0)
+    XYwarpHom = XYwarpHom.numpy()
+    print('iamparametrized')
+
+    src_pts = np.zeros((4, 1, 2), np.float32)
+    src_pts[0, 0, 0] = 0 # x
+    src_pts[0, 0, 1] = 0 # y
+    src_pts[1, 0, 0] = 479
+    src_pts[1, 0, 1] = 0
+    src_pts[2, 0, 0] = 0
+    src_pts[2, 0, 1] = 359
+    src_pts[3, 0, 0] = 479
+    src_pts[3, 0, 1] = 359
+
+    u1 = XYwarpHom[0, 0, 0] - src_pts[0, 0, 0]  # (0,0)
+    v1 = XYwarpHom[1, 0, 0] - src_pts[0, 0, 1]
+
+    u2 = XYwarpHom[0, 0, 479] - src_pts[1, 0, 0]  # (0,1)
+    v2 = XYwarpHom[1, 0, 479] - src_pts[1, 0, 1]
+
+    u3 = XYwarpHom[0, 359, 0] - src_pts[2, 0, 0]   # (1, 0)
+    v3 = XYwarpHom[1, 359, 0] - src_pts[2, 0, 1]
+
+    u4 = XYwarpHom[0, 359, 479] - src_pts[3, 0, 0]  # (1, 1)
+    v4 = XYwarpHom[1, 359, 479] - src_pts[3, 0, 1]
+
+    print(XYwarpHom[0, 0, 0], XYwarpHom[1, 0, 0])
+    print(XYwarpHom[0, 0, 479], XYwarpHom[1, 0, 479])
+    print(XYwarpHom[0, 359, 0], XYwarpHom[1, 359, 0])
+    print(XYwarpHom[0, 359, 479], XYwarpHom[1, 359, 479])
+
+    param = np.array(([u1, v1], [u2, v2], [u3, v3], [u4, v4]), dtype='float32')
+    p = mat_from_pts(param)
+    print(matrix)
+    print(p)
+    return param
+
+
+def mat_from_pts(parameters):
+    src_pts = np.zeros((4, 1, 2), np.float32)
+    src_pts[0, 0, 0] = 0  # x
+    src_pts[0, 0, 1] = 0  # y
+    src_pts[1, 0, 0] = 479
+    src_pts[1, 0, 1] = 0
+    src_pts[2, 0, 0] = 0
+    src_pts[2, 0, 1] = 359
+    src_pts[3, 0, 0] = 479
+    src_pts[3, 0, 1] = 359
+    dst_pts = np.zeros((4, 1, 2), np.float32)
+    dst_pts[0, 0, 0] = src_pts[0, 0, 0] + parameters[0, 0]
+    dst_pts[0, 0, 1] = src_pts[0, 0, 1] + parameters[0, 1]
+    dst_pts[1, 0, 0] = src_pts[1, 0, 0] + parameters[1, 0]
+    dst_pts[1, 0, 1] = src_pts[1, 0, 1] + parameters[1, 1]
+    dst_pts[2, 0, 0] = src_pts[2, 0, 0] + parameters[2, 0]
+    dst_pts[2, 0, 1] = src_pts[2, 0, 1] + parameters[2, 1]
+    dst_pts[3, 0, 0] = src_pts[3, 0, 0] + parameters[3, 0]
+    dst_pts[3, 0, 1] = src_pts[3, 0, 1] + parameters[3, 1]
+    M = cv2.getPerspectiveTransform(src_pts, dst_pts)
+    return M
+	
+def get_cv2_transformed_img(img1_cyc, img2_spot):
+    MIN_MATCH_COUNT = 10
+    # Initiate SIFT detector
+    sift = cv2.xfeatures2d.SIFT_create()
+
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1_cyc, None)
+    kp2, des2 = sift.detectAndCompute(img2_spot, None)
+
+    FLANN_INDEX_KDTREE = 0
+    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+    search_params = dict(checks=50)
+
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+    matches = flann.knnMatch(des1, des2, k=2)
+
+    # store all the good matches as per Lowe's ratio test.
+    good = []
+
+    for m, n in matches:
+        if m.distance < 0.7 * n.distance:
+            good.append(m)
+
+    if len(good) > MIN_MATCH_COUNT:
+        src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+        out_img = cv2.warpPerspective(img1_cyc, M, dsize=(480, 360))
+        return out_img, M
+    else:
+        return None, None
+
+
+
